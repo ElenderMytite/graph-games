@@ -1,6 +1,6 @@
 mod graph;
 mod node;
-mod visitor;
+mod pin;
 mod cmd_editor;
 fn main() {
     let mut cmd_editor = cmd_editor::CommandLineEditor::new();

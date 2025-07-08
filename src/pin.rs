@@ -3,11 +3,11 @@ use std::{cell::RefCell, rc::Rc};
 use crate::graph::Graph;
 
 #[derive(Clone)]
-pub struct Visitor {
+pub struct Pin {
     pub place: Rc<RefCell<Graph>>,
     pub current: Option<String>,
 }
-impl Visitor{
+impl Pin{
     pub fn new(place: Rc<RefCell<Graph>>, current: Option<String>) -> Self {
         Self{ place: place, current }
     }
