@@ -1,69 +1,65 @@
 mod cli;
+mod gui;
+
 mod graph;
+use bevy::prelude::*;
 use graph::*;
 use std::collections::HashMap;
-use std::iter::FromIterator;
 use std::env::{self};
-use bevy::prelude::*;
+fn get_position_on_circle(radius: f32, angle: f32) -> Vec3 {
+    Vec3::new(radius * angle.cos(), radius * angle.sin(), 0.)
+}
 fn main() {
+    const LEN: usize = 12;
     let mut graph = Graph::new(
-        5,
+        LEN,
         StoreMethod::EdgesOfNodes,
-        HashMap::from_iter([
-            (0, "A".to_string()),
-            (1, "B".to_string()),
-            (2, "C".to_string()),
-            (3, "D".to_string()),
-            (4, "E".to_string()),
-        ]),
+        HashMap::new(),
     );
+    graph.add_walk(&[0,1,2,3,4,5,0], false);
+    let mut loading_picture = || {for i in 0..LEN {
+        graph.insert_data(
+            i,
+            NodeData {
+                name: format!("{}", i),
+                size: Some((i * 5) as f32 + 20.),
+                fill_color: Some(Color::srgb(1. /  LEN as f32 * i as f32, 1. /  LEN as f32 * i as f32, 1. /  LEN as f32 * i as f32)),
+                outline_color: None,
+                position: Some(get_position_on_circle(
+                    300.,
+                    std::f32::consts::PI * 2. / LEN as f32 * i as f32,
+                )),
+            },
+        );
+    }};
+    loading_picture();
+    test_store_method(&mut graph);
     let index = 0;
-    let args = env::args(); 
+    let args = env::args();
     let args_vec: Vec<String> = args.collect();
-    assert_store_method(&mut graph);
-    if args_vec.contains(&"cli".to_string())
-    {
+
+    if args_vec.contains(&"cli".to_string()) {
         if args_vec.contains(&"--jump".to_string()) || args_vec.contains(&"-j".to_string()) {
             cli::console_mainloop(&mut graph, index, true);
-        }
-        else {            
+        } else {
             cli::console_mainloop(&mut graph, index, false);
         }
-    }
-    else if args_vec.contains(&"gui".to_string())
-    {
+    } else if args_vec.contains(&"gui".to_string()) {
         App::new()
             .insert_resource(graph)
             .add_plugins(DefaultPlugins)
             .add_systems(Startup, gui::start)
             .add_systems(Update, gui::handle_input)
             .run();
+    } else {
+        println!(
+            "Run with 'cli' argument to enter console mode or 'gui' argument to enter GUI mode."
+        );
     }
-    else {
-        println!("Run with 'cli' argument to enter console mode or 'gui' argument to enter GUI mode.");
-    }
-
 }
-fn assert_store_method(graph: &mut Graph, ) {
-    graph.switch_store_type(graph::StoreMethod::EdgeSet);
+fn test_store_method(graph: &mut Graph) {
+    graph.switch_store_method(graph::StoreMethod::EdgeSet);
     assert_eq!(graph.store_method(), graph::StoreMethod::EdgeSet);
-    graph.switch_store_type(graph::StoreMethod::EdgesOfNodes);
+    graph.switch_store_method(graph::StoreMethod::EdgesOfNodes);
     assert_eq!(graph.store_method(), graph::StoreMethod::EdgesOfNodes);
-}
-mod gui {
-    use bevy::prelude::*;
-    use crate::graph::Graph;
-    pub fn start(mut commands: Commands, _graph: Res<Graph>) {
-        commands.spawn(Camera2d::default());
-        // spawn circle
-        commands.spawn(Sprite {
-            color: Color::srgb(0.5, 0.5, 1.0),
-            custom_size: Some(Vec2::new(30.0, 30.0)),
-            ..Default::default()
-        });
-        // Additional GUI setup can be done here
-    }
-    pub fn handle_input(mut _graph: ResMut<Graph>) {
-        // Handle keyboard input for GUI interactions
-    }
 }

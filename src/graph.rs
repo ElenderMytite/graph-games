@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use bevy::prelude::Resource;
+use bevy::{color::Color, math::Vec3, prelude::Resource};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StoreMethod {
     EdgeSet,
@@ -11,20 +11,40 @@ enum Edges {
 }
 #[derive(Resource)]
 pub struct Graph {
-    names: HashMap<usize, String>,
+    pub data: HashMap<usize, NodeData>,
     pub length: usize,
     edges: Edges,
 }
 impl Graph {
-    pub fn new(length: usize, method: StoreMethod, names: HashMap<usize, String>) -> Self {
-        let edges = match method {
+    pub fn new(length: usize, store_method: StoreMethod, names: HashMap<usize, NodeData>) -> Self {
+        let edges = match store_method {
             StoreMethod::EdgeSet => Edges::EdgeSet(HashSet::new()),
             StoreMethod::EdgesOfNodes => Edges::EdgesOfNodes(HashMap::new()),
         };
         Graph {
             length,
             edges,
-            names,
+            data: names,
+        }
+    }
+    pub fn insert_data(&mut self, index: usize, data: NodeData) {
+        if let Some(node_data) = self.data.get_mut(&index) {
+            node_data.name = data.name;
+            if data.size.is_some() {
+                node_data.size = data.size;
+            }
+            if data.fill_color.is_some() {
+                node_data.fill_color = data.fill_color;
+            }
+            if data.outline_color.is_some() {
+                node_data.outline_color = data.outline_color;
+            }
+            if data.position.is_some() {
+                node_data.position = data.position;
+            }
+        }
+        else {
+            self.data.insert(index, data);
         }
     }
     /// Checks if the given walk is valid in the graph. Returns amount of invalid edges found.
@@ -80,6 +100,7 @@ impl Graph {
                             "Vertex index out of bounds; skipping edge ({}, {})",
                             window[0], window[1]
                         );
+                        continue;
                     }
                     adj_list
                         .entry(window[0])
@@ -94,6 +115,7 @@ impl Graph {
                             "Vertex index out of bounds; skipping edge ({}, {})",
                             window[0], window[1]
                         );
+                        continue;
                     }
                     edge_set.insert((window[0], window[1]));
                 }
@@ -126,7 +148,7 @@ impl Graph {
     }
 }
 impl Graph {
-    pub fn switch_store_type(&mut self, method: StoreMethod) {
+    pub fn switch_store_method(&mut self, method: StoreMethod) {
         match (&self.edges, method) {
             (Edges::EdgesOfNodes(adj_list), StoreMethod::EdgeSet) => {
                 let mut edge_set = HashSet::new();
@@ -155,18 +177,33 @@ impl Graph {
     }
 }
 impl Graph {
+    pub fn get_adjacent_nodes(&self, index: usize) -> Vec<usize> {
+        match &self.edges {
+            Edges::EdgesOfNodes(adj_list) => {
+                if let Some(neighbors) = adj_list.get(&index) {
+                    neighbors.iter().cloned().collect()
+                } else {
+                    Vec::new()
+                }
+            }
+            Edges::EdgeSet(edge_set) => edge_set
+                .iter()
+                .filter_map(|&(src, dst)| if src == index { Some(dst) } else { None })
+                .collect(),
+        }
+    }
     pub fn display_adjacent_nodes(&self, index: usize) {
         match &self.edges {
             Edges::EdgesOfNodes(adj_list) => {
                 if let Some(neighbors) = adj_list.get(&index) {
                     println!(
                         "Adjacent nodes for {}:",
-                        self.names.get(&index).unwrap_or(&index.to_string())
+                        self.data.get(&index).unwrap_or(&NodeData::from(index.to_string())).name
                     );
                     for neighbor in neighbors {
                         println!(
                             "{}: {}",
-                            self.names.get(neighbor).unwrap_or(&"".to_string()),
+                            self.data.get(neighbor).unwrap_or(&NodeData::from("".to_string())).name,
                             neighbor
                         );
                     }
@@ -182,8 +219,8 @@ impl Graph {
                 if !neighbors.is_empty() {
                     for neighbor in neighbors {
                         println!(
-                            "{}",
-                            self.names.get(&neighbor).unwrap_or(&neighbor.to_string())
+                            "{:?}",
+                            self.data.get(&neighbor).unwrap_or(&NodeData::from(neighbor.to_string()))
                         );
                     }
                 } else {
@@ -204,19 +241,39 @@ mod tests {
             5,
             StoreMethod::EdgesOfNodes,
             HashMap::from_iter([
-                (0, "A".to_string()),
-                (1, "B".to_string()),
-                (2, "C".to_string()),
-                (3, "D".to_string()),
-                (4, "E".to_string()),
+                (0, NodeData::from("A".to_string())),
+                (1, NodeData::from("B".to_string())),
+                (2, NodeData::from("C".to_string())),
+                (3, NodeData::from("D".to_string())),
+                (4, NodeData::from("E".to_string())),
             ]),
         );
         graph.add_walk(&[0, 1, 2], false);
         assert_eq!(graph.check_walk(&[0, 1, 2], false), 0);
         assert_eq!(graph.check_walk(&[0, 2], false), 1);
-        graph.switch_store_type(StoreMethod::EdgeSet);
+        graph.switch_store_method(StoreMethod::EdgeSet);
         assert_eq!(graph.store_method(), StoreMethod::EdgeSet);
         assert_eq!(graph.check_walk(&[0, 1, 2], false), 0);
         assert_eq!(graph.check_walk(&[0, 2], false), 1);
+    }
+}
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct NodeData
+{
+    pub name: String,
+    pub size: Option<f32>,
+    pub fill_color: Option<Color>,
+    pub outline_color: Option<Color>,
+    pub position: Option<Vec3>,
+}
+impl From<String> for NodeData {
+    fn from(name: String) -> Self {
+        NodeData {
+            name,
+            size: None,
+            fill_color: None,
+            position: None,
+            outline_color: None,
+        }
     }
 }
