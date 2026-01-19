@@ -17,22 +17,19 @@ fn main() {
         HashMap::new(),
     );
     graph.add_walk(&[0,1,2,3,4,5,0], false);
-    let mut loading_picture = || {for i in 0..LEN {
+    for i in 0..LEN {
         graph.insert_data(
             i,
             NodeData {
                 name: format!("{}", i),
-                size: Some((i * 5) as f32 + 20.),
-                fill_color: Some(Color::srgb(1. /  LEN as f32 * i as f32, 1. /  LEN as f32 * i as f32, 1. /  LEN as f32 * i as f32)),
-                outline_color: None,
                 position: Some(get_position_on_circle(
                     300.,
                     std::f32::consts::PI * 2. / LEN as f32 * i as f32,
                 )),
+                ..Default::default()
             },
         );
-    }};
-    loading_picture();
+    }
     test_store_method(&mut graph);
     let index = 0;
     let args = env::args();
